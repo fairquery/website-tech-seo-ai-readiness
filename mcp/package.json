@@ -1,7 +1,7 @@
 {
   "name": "fairquery-web-mcp",
-  "version": "1.0.0",
-  "description": "stdio MCP server for Fairquery Website Tech, SEO Fairquery EDGAR company facts & filings llms.txt Check for Agents (Apify Actor)",
+  "version": "1.2.0",
+  "description": "stdio MCP server for website checks: quick status, SEO audit, AI-crawler access (robots.txt, llms.txt), tech stack, sitemap, security headers, snapshot comparison, and bulk audits via Apify (Fairquery)",
   "type": "module",
   "bin": {
     "fairquery-web-mcp": "./dist/index.js"
@@ -9,13 +9,15 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "test:live": "node scripts/live-test.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
+    "cheerio": "^1.2.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

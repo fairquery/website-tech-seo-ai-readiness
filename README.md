@@ -85,16 +85,34 @@ Read dataset items (`type == "site"`) and `RUN_SUMMARY`. A standalone stdio MCP 
 
 ## Local stdio MCP server
 
-This repo ships a **stdio MCP server** (TypeScript, `@modelcontextprotocol/sdk`) under [`mcp/`](./mcp) exposing `check_websites` (runs this Actor through the Apify API) and the free `check_llms_txt`. `initialize` and `tools/list` work **without** a token; `check_websites` requires `APIFY_TOKEN` (billed per the Store pricing).
+This repo ships a **stdio MCP server** (TypeScript, `@modelcontextprotocol/sdk`) under [`mcp/`](./mcp) with single-purpose tools. Seven are **free** and run locally (no token); one optional bulk tool runs this Actor through the Apify API. `initialize` and `tools/list` work **without** a token.
+
+| Tool | What it does | Paging | Cost |
+|---|---|---|---|
+| `web_quick_check` | 1-20 URLs: status, redirect chain, response time, content type, title | – | free |
+| `web_seo_audit` | One URL: meta/OG/JSON-LD/headings/images, `seo_issues`, `seo_score` and `ai_readiness_score` (0-100); output is a reusable snapshot | – | free |
+| `web_ai_crawler_access` | robots.txt rules per AI bot (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, ...), `llms.txt` / `llms-full.txt` | – | free |
+| `web_tech_stack` | Frameworks, CMS, hosting/CDN, analytics with evidence; `category` filter | `limit`/`offset` | free |
+| `web_sitemap_info` | Sitemap discovery, index/children, URL list with lastmod; `contains`, `sort` | `limit`/`offset` | free |
+| `web_security_headers` | HSTS, CSP, X-Content-Type-Options, X-Frame-Options, Referrer-/Permissions-Policy, COOP; score + grade A-F | – | free |
+| `web_compare_snapshots` | Diff two saved snapshots, a saved snapshot vs a fresh re-audit (follow-up), or two live URLs | – | free |
+| `web_batch_audit` | Bulk audit of up to thousands of sites via the Apify Actor (formerly `check_websites`) | – | pay-per-event, needs `APIFY_TOKEN` |
+
+Errors are named codes: `INVALID_URL`, `BLOCKED_PRIVATE_ADDRESS`, `DNS_FAILED`, `FETCH_FAILED`, `TIMEOUT`, `TOO_MANY_REDIRECTS`, `SITEMAP_NOT_FOUND`, `INVALID_ARGUMENTS`, `APIFY_TOKEN_MISSING`, `APIFY_ACTOR_RUN_FAILED`.
+
+**Respectful fetching:** User-Agent `FairqueryBot ... Fairquery-MCP`, 15 s timeout, 1.5 MB HTML / 10 MB sitemap cap, max 5 redirects, and an SSRF guard that refuses hosts (including redirect targets) resolving to private, loopback, link-local or reserved addresses. If you run behind a fake-IP DNS proxy that maps all hosts into 198.18.0.0/15, set `FAIRQUERY_ALLOW_FAKE_IP_DNS=1`.
+
+**Breaking change in v1.2.0:** `check_websites` → `web_batch_audit` (same input, same billing); `check_llms_txt` was removed, use `web_ai_crawler_access`.
 
 ```bash
 cd mcp && npm install && npm run build
+npm run test:live                                    # live test of every free tool, no token
 node scripts/smoke-test.mjs                          # initialize + tools/list, no token
-APIFY_TOKEN=... node scripts/smoke-test.mjs --call   # real tool call
+APIFY_TOKEN=... node scripts/smoke-test.mjs --call   # real web_batch_audit call
 ```
 
 ```json
-{ "mcpServers": { "fairquery-web": { "command": "node", "args": ["/path/to/website-tech-seo-ai-readiness/mcp/dist/index.js"], "env": { "APIFY_TOKEN": "<your Apify token>" } } } }
+{ "mcpServers": { "fairquery-web": { "command": "node", "args": ["/path/to/website-tech-seo-ai-readiness/mcp/dist/index.js"], "env": { "APIFY_TOKEN": "<optional, only for web_batch_audit>" } } } }
 ```
 
 Docker: `docker build -t fairquery-web-mcp .` (the repo-root `Dockerfile` builds this MCP server and is what Glama uses; the Apify Actor image is built from `.actor/Dockerfile`). `glama.json` lists `fairquery` as maintainer.

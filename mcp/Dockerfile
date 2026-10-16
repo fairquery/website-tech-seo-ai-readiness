@@ -1,4 +1,4 @@
-# Fairquery Website Tech, SEO Fairquery EDGAR stdio MCP server llms.txt Check for Agents stdio MCP server
+# Fairquery Website Tech, SEO & AI-readiness stdio MCP server
 # Build from this directory: docker build -t fairquery-web-mcp .
 # Or paste the repo-root variant into Glama (see README).
 FROM node:22-alpine AS builder

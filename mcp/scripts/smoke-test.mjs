@@ -37,11 +37,11 @@ await withClient(baseEnv, async (client) => {
     for (const t of tools) {
         console.log('  tool:', t.name);
     }
-    if (!tools.some((t) => t.name === 'check_websites')) {
-        throw new Error('expected tool check_websites');
+    if (!tools.some((t) => t.name === 'web_batch_audit')) {
+        throw new Error('expected tool web_batch_audit');
     }
     const noToken = await client.callTool({
-        name: 'check_websites',
+        name: 'web_batch_audit',
         arguments: { urls: ['example.com'] },
     });
     const text = JSON.stringify(noToken);
@@ -59,7 +59,7 @@ if (doCall) {
     await withClient({ ...process.env }, async (client) => {
         console.log('OK connect+initialize (with token present, value not logged)');
         const result = await client.callTool({
-            name: 'check_websites',
+            name: 'web_batch_audit',
             arguments: {
                 urls: ['example.com'],
             },
@@ -70,13 +70,14 @@ if (doCall) {
         const content = result.content?.[0];
         const raw = content && content.type === 'text' ? content.text : JSON.stringify(result);
         const parsed = JSON.parse(raw);
-        const n = Array.isArray(parsed) ? parsed.length : 1;
-        const types = Array.isArray(parsed)
-            ? [...new Set(parsed.map((r) => r.type).filter(Boolean))]
+        const rows = Array.isArray(parsed) ? parsed : parsed.items ?? [];
+        const n = rows.length;
+        const types = rows.length
+            ? [...new Set(rows.map((r) => r.type).filter(Boolean))]
             : [];
         console.log('OK tool call rows=', n, 'types=', types.join(',') || 'n/a');
-        if (Array.isArray(parsed) && parsed[0]) {
-            console.log('OK first_row_keys=', Object.keys(parsed[0]).slice(0, 12).join(','));
+        if (rows[0]) {
+            console.log('OK first_row_keys=', Object.keys(rows[0]).slice(0, 12).join(','));
         }
     });
 }
