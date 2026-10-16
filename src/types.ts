@@ -3,8 +3,8 @@
 export const SCHEMA_VERSION = '1.0.0';
 export const USER_AGENT = 'Mozilla/5.0 (compatible; FairqueryBot/1.0; +https://apify.com/fairquery)';
 export const BOT_TOKEN = 'FairqueryBot';
-export const SITE_CONCURRENCY = 5;
-export const MAX_HTML_BYTES = 3_000_000;
+export const SITE_CONCURRENCY = 3;
+export const MAX_HTML_BYTES = 1_500_000;
 
 export const AI_BOTS = [
     'GPTBot',
@@ -97,6 +97,7 @@ export interface SiteRow extends BaseRow {
     sitemap_url: string | null;
     sitemap_url_count: number | null;
     sitemap_is_index: boolean | null;
+    sitemap_count_truncated: boolean | null;
     llms_txt_found: boolean | null;
     llms_txt_url: string | null;
     llms_txt_title: string | null;

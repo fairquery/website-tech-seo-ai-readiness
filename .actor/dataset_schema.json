@@ -344,6 +344,13 @@
             "context": {
                 "type": "object",
                 "title": "Error context"
+            },
+            "sitemap_count_truncated": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "Sitemap count truncated (lower bound)"
             }
         },
         "required": [

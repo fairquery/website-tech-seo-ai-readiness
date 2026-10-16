@@ -176,3 +176,40 @@ describe('http', () => {
         expect(r.body.length).toBeLessThan(5000);
     });
 });
+
+describe('streamSitemap', () => {
+    it('counts <loc> across chunk boundaries without buffering', async () => {
+        const { streamSitemap } = await import('../src/http.js');
+        const xml = `<?xml version="1.0"?><urlset>${'<url><loc>https://a.io/x</loc></url>'.repeat(1000)}</urlset>`;
+        const chunks = xml.match(/.{1,7}/gs)!; // tiny chunks split tags
+        const body = (): ReadableStream<Uint8Array> => {
+            let i = 0;
+            return new ReadableStream({
+                pull(c) {
+                    if (i < chunks.length) c.enqueue(new TextEncoder().encode(chunks[i++]));
+                    else c.close();
+                },
+            });
+        };
+        const fake = (async () => new Response(body())) as unknown as typeof fetch;
+        const r = await streamSitemap(new Http(fake), 'https://a.io/sitemap.xml');
+        expect(r).toMatchObject({ isSitemap: true, isIndex: false, count: 1000, truncated: false });
+        const capped = await streamSitemap(new Http(fake), 'https://a.io/sitemap.xml', 5000);
+        expect(capped!.truncated).toBe(true);
+        expect(capped!.count).toBeLessThan(1000);
+        const html = (async () => new Response('<html>' + 'x'.repeat(10000))) as unknown as typeof fetch;
+        expect((await streamSitemap(new Http(html), 'https://a.io/sitemap.xml'))!.isSitemap).toBe(false);
+    });
+});
+
+describe('slimHtml', () => {
+    it('drops script/style bodies but keeps JSON-LD and text', async () => {
+        const { slimHtml } = await import('../src/page.js');
+        const out = slimHtml(
+            '<script src="a.js">var big=1</script><script type="application/ld+json">{"@type":"X"}</script><style>.a{}</style><!-- c --><p>hi</p>',
+        );
+        expect(out).toBe(
+            '<script src="a.js"></script><script type="application/ld+json">{"@type":"X"}</script><style></style><p>hi</p>',
+        );
+    });
+});

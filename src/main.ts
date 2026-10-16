@@ -1,16 +1,9 @@
 import { Actor, log } from 'apify';
 
-import { type FetchResult,Http, HttpError, normalizeUrl } from './http.js';
+import { Emitter } from './emitter.js';
+import { type FetchResult, Http, HttpError, normalizeUrl, streamSitemap } from './http.js';
 import { aiReadiness, extractPage, seoAudit } from './page.js';
-import {
-    botStatus,
-    isAllowed,
-    looksLikeLlmsTxt,
-    parseLlmsTxt,
-    parseRobots,
-    parseSitemap,
-    type Robots,
-} from './robots.js';
+import { botStatus, isAllowed, looksLikeLlmsTxt, parseLlmsTxt, parseRobots, type Robots } from './robots.js';
 import { detectTech } from './tech.js';
 import {
     type ActorInput,
@@ -28,8 +21,10 @@ import {
 await Actor.init();
 
 const aborting = { value: false };
-Actor.on('aborting', () => {
+const emitter = new Emitter();
+Actor.on('aborting', async () => {
     aborting.value = true;
+    await emitter.flush();
     log.warning('Aborting — finishing in-flight sites.');
 });
 
@@ -101,7 +96,7 @@ async function tryGet(url: string, accept: string, maxBytes = 2_000_000): Promis
 }
 
 async function checkSite(inputStr: string, url: URL): Promise<void> {
-    const {origin} = url;
+    const { origin } = url;
     let robots: Robots | null = null;
     let robotsFound: boolean | null = null;
     let robotsUrl: string | null = null;
@@ -157,6 +152,7 @@ async function checkSite(inputStr: string, url: URL): Promise<void> {
     let sitemapUrl: string | null = null;
     let sitemapCount: number | null = null;
     let sitemapIndex: boolean | null = null;
+    let sitemapTruncated: boolean | null = null;
     if (input.checkSitemap) {
         const candidates = [
             ...(robots?.sitemaps ?? []),
@@ -165,13 +161,13 @@ async function checkSite(inputStr: string, url: URL): Promise<void> {
         ];
         sitemapFound = false;
         for (const c of [...new Set(candidates)].slice(0, 4)) {
-            const r = await tryGet(c, 'application/xml,text/xml,*/*;q=0.5', 5_000_000);
-            if (r && r.status === 200 && /<(urlset|sitemapindex)[\s>]/i.test(r.body)) {
-                const s = parseSitemap(r.body);
+            const r = await streamSitemap(http, c);
+            if (r && r.isSitemap) {
                 sitemapFound = true;
                 sitemapUrl = r.url;
-                sitemapCount = s.count;
-                sitemapIndex = s.isIndex;
+                sitemapCount = r.count;
+                sitemapIndex = r.isIndex;
+                sitemapTruncated = r.truncated;
                 break;
             }
         }
@@ -184,7 +180,7 @@ async function checkSite(inputStr: string, url: URL): Promise<void> {
     let llmsLinks: number | null = null;
     let llmsFull: boolean | null = null;
     if (input.checkLlmsTxt) {
-        const r = await tryGet(`${finalUrl.origin}/llms.txt`, 'text/plain,text/markdown,*/*;q=0.5', 1_000_000);
+        const r = await tryGet(`${finalUrl.origin}/llms.txt`, 'text/plain,text/markdown,*/*;q=0.5', 300_000);
         llmsFound = Boolean(r && r.status === 200 && looksLikeLlmsTxt(r.body, r.headers.get('content-type')));
         if (llmsFound && r) {
             const p = parseLlmsTxt(r.body);
@@ -251,6 +247,7 @@ async function checkSite(inputStr: string, url: URL): Promise<void> {
         sitemap_url: sitemapUrl,
         sitemap_url_count: sitemapCount,
         sitemap_is_index: sitemapIndex,
+        sitemap_count_truncated: sitemapTruncated,
         llms_txt_found: llmsFound,
         llms_txt_url: llmsUrl,
         llms_txt_title: llmsTitle,
@@ -279,25 +276,16 @@ async function finish(): Promise<never> {
         avg_ai_readiness_score: avg(ai),
         input,
     };
+    await emitter.flush();
     await Actor.setValue('RUN_SUMMARY', summary);
     await Actor.exit();
     return undefined as never;
 }
 
 async function emit(row: OutputRow, eventName: string): Promise<void> {
-    await Actor.pushData(row);
-    // Only charge when the run is on pay-per-event pricing (Store monetization approved).
-    try {
-        const pricing = Actor.getChargingManager().getPricingInfo();
-        if (!pricing.isPayPerEvent) return;
-        const result = await Actor.charge({ eventName });
-        if (result.eventChargeLimitReached) {
-            log.warning(`Charge limit reached for ${eventName}`);
-            aborting.value = true;
-        }
-    } catch (e) {
-        log.debug(`Actor.charge skipped/failed for ${eventName}: ${e instanceof Error ? e.message : String(e)}`);
-    }
+    // Batched push + charge; Actor.charge only runs when the run is pay-per-event (see emitter.ts).
+    await emitter.emit(row, eventName);
+    if (emitter.limitReached) aborting.value = true;
 }
 
 /** Error rows are never charged. */
@@ -313,5 +301,5 @@ async function pushError(
         checked_at: new Date().toISOString(),
         ...partial,
     };
-    await Actor.pushData(row);
+    await emitter.emit(row, null); // error rows are never charged
 }

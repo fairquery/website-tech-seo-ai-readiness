@@ -29,8 +29,17 @@ export type PageFacts = Pick<
 const SOCIAL =
     /^(https?:)?\/\/(www\.)?(twitter\.com|x\.com|linkedin\.com|facebook\.com|instagram\.com|youtube\.com|github\.com|tiktok\.com|mastodon\.social|bsky\.app)\//i;
 
+/** Drop inline script/style bodies (keeps JSON-LD) so the DOM is a fraction of the raw HTML size. */
+export function slimHtml(html: string): string {
+    return html
+        .replace(/<script\b(?![^>]*application\/ld\+json)([^>]*)>[\s\S]*?<\/script>/gi, '<script$1></script>')
+        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '<style></style>')
+        .replace(/<svg\b[\s\S]*?<\/svg>/gi, '<svg></svg>')
+        .replace(/<!--[\s\S]*?-->/g, '');
+}
+
 export function extractPage(html: string, pageUrl: string): PageFacts {
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(slimHtml(html));
     const base = new URL(pageUrl);
     const abs = (h: string | undefined): string | null => {
         if (!h) return null;

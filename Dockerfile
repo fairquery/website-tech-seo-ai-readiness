@@ -20,4 +20,5 @@ RUN npm --quiet set progress=false \
 COPY --from=builder --chown=myuser:myuser /usr/src/app/dist ./dist
 COPY --chown=myuser:myuser . ./
 
-CMD ["node", "dist/main.js"]
+# Cap V8 heap at ~60% of the run memory so GC kicks in before the container hits its cgroup limit.
+CMD ["sh", "-c", "exec node --max-old-space-size=$(( ${ACTOR_MEMORY_MBYTES:-256} * 6 / 10 )) dist/main.js"]
