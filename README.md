@@ -15,7 +15,7 @@ Do **not** use it for full-site crawls, JS-rendered content (single-page apps ma
 
 ## How it works
 
-Per site (max 5 in parallel): `GET /robots.txt` → `GET <url>` → sitemap (from robots `Sitemap:` or `/sitemap.xml`, `/sitemap_index.xml`) → `/llms.txt` and `/llms-full.txt`. Identifies as `FairqueryBot/1.0`; by default skips pages that robots.txt disallows for generic crawlers. Tech detection uses ~75 HTML/header/cookie/meta-generator signatures from a single response.
+Per site (max 3 in parallel): `GET /robots.txt` → `GET <url>` → sitemap (from robots `Sitemap:` or `/sitemap.xml`, `/sitemap_index.xml`) → `/llms.txt` and `/llms-full.txt`. Identifies as `FairqueryBot/1.0`; by default skips pages that robots.txt disallows for generic crawlers. Tech detection uses ~75 HTML/header/cookie/meta-generator signatures from a single response.
 
 ## Input
 
@@ -111,6 +111,14 @@ npm install
 npx apify run      # uses input defaults, or storage/key_value_stores/default/INPUT.json
 npm test
 ```
+
+## Kits & templates
+
+Optional guides from Fairquery for wiring this Actor into agents and automations (the Actor works fine without them):
+
+- [AI Agent Data Toolkit Quick-Start](https://fairquery.gumroad.com/l/qayngz) (PDF): MCP setup for Claude Desktop and Cursor, API calls, recipes, cost estimates.
+- [n8n + Zapier Workflow Template Pack](https://fairquery.gumroad.com/l/koffbf): 10 importable n8n workflows for the four Fairquery Actors, plus Zapier setup guides.
+- [Agent Prompt Pack for Research & Lead Ops](https://fairquery.gumroad.com/l/djdilu): 69 prompts for company research, lead cleaning, SEO and security reviews.
 
 ## Disclaimer
 
