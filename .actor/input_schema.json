@@ -1,0 +1,57 @@
+{
+    "$schema": "https://apify.com/schemas/v1/input.ide.json",
+    "title": "Website Tech, SEO & AI-Readiness Check",
+    "description": "Check websites' tech stack, metadata, SEO basics, robots.txt AI-bot rules, sitemap and llms.txt.",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "urls": {
+            "title": "Websites",
+            "type": "array",
+            "editor": "stringList",
+            "description": "Domains or URLs (e.g. example.com or https://example.com/page). One row per unique URL.",
+            "default": [
+                "apify.com",
+                "https://www.python.org",
+                "vercel.com"
+            ],
+            "prefill": [
+                "apify.com",
+                "https://www.python.org",
+                "vercel.com"
+            ]
+        },
+        "checkRobots": {
+            "title": "Check robots.txt & AI bots",
+            "type": "boolean",
+            "description": "Fetch robots.txt and report allow/block status for GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot and more.",
+            "default": true
+        },
+        "checkSitemap": {
+            "title": "Check sitemap",
+            "type": "boolean",
+            "description": "Find the XML sitemap (robots.txt Sitemap: or /sitemap.xml) and count URLs.",
+            "default": true
+        },
+        "checkLlmsTxt": {
+            "title": "Check llms.txt",
+            "type": "boolean",
+            "description": "Check /llms.txt and /llms-full.txt (llmstxt.org).",
+            "default": true
+        },
+        "respectRobotsTxt": {
+            "title": "Respect robots.txt",
+            "type": "boolean",
+            "description": "Skip pages that robots.txt disallows for generic crawlers (recommended).",
+            "default": true
+        },
+        "maxSites": {
+            "title": "Max sites",
+            "type": "integer",
+            "description": "Safety cap on unique URLs per run.",
+            "default": 500,
+            "minimum": 1,
+            "maximum": 10000
+        }
+    }
+}

@@ -1,0 +1,406 @@
+{
+    "$schema": "https://apify.com/schemas/v1/dataset.ide.json",
+    "actorSpecification": 1,
+    "fields": {
+        "type": "object",
+        "properties": {
+            "schema_version": {
+                "type": "string",
+                "title": "Schema version",
+                "example": "1.0.0"
+            },
+            "type": {
+                "type": "string",
+                "title": "Row type",
+                "enum": [
+                    "site",
+                    "error"
+                ]
+            },
+            "source_url": {
+                "type": "string",
+                "title": "Source URL",
+                "description": "Final fetched URL."
+            },
+            "checked_at": {
+                "type": "string",
+                "title": "Checked at"
+            },
+            "input": {
+                "type": "string",
+                "title": "Input"
+            },
+            "final_url": {
+                "type": "string",
+                "title": "Final URL"
+            },
+            "domain": {
+                "type": "string",
+                "title": "Domain"
+            },
+            "status_code": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "HTTP status"
+            },
+            "redirected": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "Redirected"
+            },
+            "https": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "HTTPS"
+            },
+            "response_ms": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "Response ms"
+            },
+            "content_type": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Content type"
+            },
+            "html_bytes": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "HTML bytes"
+            },
+            "title": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Title"
+            },
+            "meta_description": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Meta description"
+            },
+            "canonical": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Canonical"
+            },
+            "lang": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Language"
+            },
+            "meta_robots": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Meta robots"
+            },
+            "viewport": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "Viewport"
+            },
+            "h1": {
+                "type": "array",
+                "title": "H1 headings"
+            },
+            "headings_count": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "Heading counts"
+            },
+            "word_count": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "Word count"
+            },
+            "links_internal": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "Internal links"
+            },
+            "links_external": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "External links"
+            },
+            "images": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "Images"
+            },
+            "images_missing_alt": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "Images missing alt"
+            },
+            "favicon": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Favicon"
+            },
+            "open_graph": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "Open Graph"
+            },
+            "twitter_card": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "Twitter card"
+            },
+            "json_ld_types": {
+                "type": "array",
+                "title": "JSON-LD types"
+            },
+            "hreflang": {
+                "type": "array",
+                "title": "hreflang"
+            },
+            "feeds": {
+                "type": "array",
+                "title": "Feeds"
+            },
+            "social_links": {
+                "type": "array",
+                "title": "Social links"
+            },
+            "technologies": {
+                "type": "array",
+                "title": "Technologies"
+            },
+            "server": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Server header"
+            },
+            "security_headers": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "Security headers"
+            },
+            "robots_txt_found": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "robots.txt found"
+            },
+            "robots_txt_url": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "robots.txt URL"
+            },
+            "sitemaps_declared": {
+                "type": "array",
+                "title": "Sitemaps declared"
+            },
+            "ai_bots": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "title": "AI bot access"
+            },
+            "sitemap_found": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "Sitemap found"
+            },
+            "sitemap_url": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "Sitemap URL"
+            },
+            "sitemap_url_count": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "Sitemap URL count"
+            },
+            "sitemap_is_index": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "Sitemap is index"
+            },
+            "llms_txt_found": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "llms.txt found"
+            },
+            "llms_txt_url": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "llms.txt URL"
+            },
+            "llms_txt_title": {
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "title": "llms.txt title"
+            },
+            "llms_txt_links": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "llms.txt links"
+            },
+            "llms_full_txt_found": {
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "title": "llms-full.txt found"
+            },
+            "seo_score": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "SEO score"
+            },
+            "seo_issues": {
+                "type": "array",
+                "title": "SEO issues"
+            },
+            "ai_readiness_score": {
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "title": "AI-readiness score"
+            },
+            "code": {
+                "type": "string",
+                "title": "Error code"
+            },
+            "message": {
+                "type": "string",
+                "title": "Error message"
+            },
+            "retryable": {
+                "type": "boolean",
+                "title": "Retryable"
+            },
+            "context": {
+                "type": "object",
+                "title": "Error context"
+            }
+        },
+        "required": [
+            "schema_version",
+            "type",
+            "source_url",
+            "checked_at"
+        ]
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": [
+                    "type",
+                    "domain",
+                    "title",
+                    "seo_score",
+                    "ai_readiness_score",
+                    "llms_txt_found",
+                    "sitemap_found",
+                    "technologies",
+                    "code"
+                ]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "type": {
+                        "label": "Row type"
+                    },
+                    "domain": {
+                        "label": "Domain"
+                    },
+                    "title": {
+                        "label": "Title"
+                    },
+                    "seo_score": {
+                        "label": "SEO score"
+                    },
+                    "ai_readiness_score": {
+                        "label": "AI-readiness score"
+                    },
+                    "llms_txt_found": {
+                        "label": "llms.txt found"
+                    },
+                    "sitemap_found": {
+                        "label": "Sitemap found"
+                    },
+                    "technologies": {
+                        "label": "Technologies"
+                    },
+                    "code": {
+                        "label": "Error code"
+                    }
+                }
+            }
+        }
+    }
+}
