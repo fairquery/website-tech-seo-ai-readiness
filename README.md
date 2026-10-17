@@ -1,5 +1,7 @@
 # Website Tech, SEO & llms.txt Check for Agents
 
+**Returns one row per website (tech stack, SEO score, robots.txt AI-crawler rules, sitemap and llms.txt) for $2 per 1,000 sites.** You pay $0.002 per site row, and error rows are free. Example: auditing 250 lead websites costs 250 × $0.002 = **$0.50**, plus Apify's $0.00005 Actor-start fee.
+
 **Fairquery** Apify Actor that returns **one structured row per website**: tech stack, title/meta/Open Graph/JSON-LD, an SEO issue list with a 0–100 score, **robots.txt rules for AI crawlers** (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot, …), XML sitemap, **llms.txt / llms-full.txt**, security headers, and a 0–100 **AI-readiness score**. Plain HTTP (no browser), so it's fast and cheap.
 
 ## When to use this Actor (LLM / tool selection)
@@ -21,7 +23,7 @@ Per site (max 3 in parallel): `GET /robots.txt` → `GET <url>` → sitemap (fro
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `urls` | `string[]` | `apify.com`, `python.org`, `vercel.com` | Domains or URLs |
+| `urls` | `string[]` | – (required; 3 sample sites are prefilled in the Console form) | Domains or URLs |
 | `checkRobots` | `bool` | `true` | robots.txt + AI-bot access map |
 | `checkSitemap` | `bool` | `true` | Find sitemap and count URLs |
 | `checkLlmsTxt` | `bool` | `true` | Check `/llms.txt` and `/llms-full.txt` |
@@ -67,11 +69,20 @@ Key-value store record **`RUN_SUMMARY`**: sites checked, errors, HTTP request co
 
 ## Pricing
 
-Pay per event: `site-checked` per site row. Error rows are never charged. See the Store pricing tab.
+| Event | Price | When |
+| --- | --- | --- |
+| `site-checked` | $0.002 | Each website row returned |
+| `apify-actor-start` | $0.00005 | Once per run, per GB of memory (Apify default event) |
+
+Error rows (`FETCH_FAILED`, `HTTP_ERROR`, `BLOCKED_OR_RATE_LIMITED`, `ROBOTS_DISALLOWED`, …) are **never charged**.
+
+**Worked example:** 1,000 domains from a lead list where 60 cannot be fetched: 940 × $0.002 = **$1.88**, plus $0.00005.
+
+To cap spend, set a maximum cost per run in the run options; the Actor stops cleanly at the limit. `maxSites` caps how many sites one run checks. Prices are from the Store pricing tab (October 2026).
 
 ## Memory / runtime
 
-Default **256 MB**, no browser, no proxy. Typically 1–3 s per site.
+Default **256 MB**, no browser, no proxy. Typically 1–3 s per site, 3 sites in parallel. Slow or rate-limiting sites take longer.
 
 ## MCP / Apify tools
 
@@ -117,18 +128,60 @@ APIFY_TOKEN=... node scripts/smoke-test.mjs --call   # real web_batch_audit call
 
 Docker: `docker build -t fairquery-web-mcp .` (the repo-root `Dockerfile` builds this MCP server and is what Glama uses; the Apify Actor image is built from `.actor/Dockerfile`). `glama.json` lists `fairquery` as maintainer.
 
-## Links
+## Works well after
 
-- Apify Store: https://apify.com/fairquery/website-tech-seo-ai-readiness
-- License: MIT
+- [Google Maps Scraper](https://apify.com/compass/crawler-google-places) or [Google Search Results Scraper](https://apify.com/apify/google-search-scraper): pass the website URLs they return into `urls` to see each business's tech stack, SEO basics and AI-crawler rules.
+- Pair it with the [Website Contact & Company Enricher](https://apify.com/fairquery/website-contact-company-enricher) on the same domain list to get contacts and tech in two rows per company.
 
-## Local development
+## Troubleshooting
 
-```bash
-npm install
-npx apify run      # uses input defaults, or storage/key_value_stores/default/INPUT.json
-npm test
-```
+| Symptom | Cause and fix |
+| --- | --- |
+| Run fails at once with `INPUT_EMPTY` | `urls` was empty. The three sample sites in the Console form are prefill only and are not sent with API calls. |
+| `BLOCKED_OR_RATE_LIMITED` (HTTP 403/429) | The site blocks datacenter traffic or bots. These rows are free; the Actor does not use proxies or browsers to get around blocks. |
+| `ROBOTS_DISALLOWED` | robots.txt disallows the page for generic crawlers. Set `respectRobotsTxt` to `false` only if you have the right to fetch the page. |
+| Low SEO score or `THIN_CONTENT` on a modern site | The page renders its content with JavaScript. The Actor reads the server HTML only (no browser). |
+| Technology missing from the list | Detection uses about 75 signatures from a single response, so some tools (for example tag-manager-only scripts) are not visible. The list is heuristic. |
+
+## FAQ
+
+**Does it render JavaScript?**
+
+No. It makes plain HTTP requests, which keeps it fast and cheap. Content injected by JavaScript is not seen.
+
+**What does the AI-readiness score measure?**
+
+llms.txt (25), llms-full.txt (5), AI bots allowed (up to 20), JSON-LD (15), at least 150 words of server-rendered text (15), sitemap (10) and meta description (10); minus 30 for `noindex`. It is a heuristic, not a ranking factor.
+
+**How much does it cost?**
+
+$0.002 per site row ($2 per 1,000), plus a $0.00005 start fee. Failed fetches are free.
+
+**How do I limit spend?**
+
+Set a maximum cost per run in the run options and/or lower `maxSites`.
+
+**Does it crawl the whole site?**
+
+No. Per site it fetches robots.txt, the given URL, the sitemap and `/llms.txt` + `/llms-full.txt`. Use a crawler for full-site audits.
+
+**Can an AI agent call it?**
+
+Yes, through [Apify MCP](https://mcp.apify.com) with Actor `fairquery/website-tech-seo-ai-readiness`, or through the stdio MCP server in the GitHub repo, which also has free single-URL tools.
+
+## Fairquery family
+
+Other Fairquery tools on the Apify Store. Each one returns structured rows with machine-readable error codes, and error rows are never charged:
+
+- [Email Validator for Agents (MX, Disposable, Typo)](https://apify.com/fairquery/email-validator-mx-disposable): syntax, MX, disposable, role and typo checks without sending mail; $2 per 1,000 emails
+- [Website Contact & Company Enricher](https://apify.com/fairquery/website-contact-company-enricher): domain in, public business emails, phones, socials and company details out; $4 per 1,000 domains
+- [Sanctions & Watchlist Screener (OFAC, EU, UK, UN)](https://apify.com/fairquery/sanctions-watchlist-screener): fuzzy name screening against official sanctions lists; $5 per 1,000 names
+- [LLM Data Guard: PII & Secret Redactor](https://apify.com/fairquery/llm-data-guard-pii-secrets): redact PII and secrets before text reaches an LLM; $3 per 1,000 documents + $0.50 per 1,000 findings
+- [Dependency Vulnerability Check for Agents](https://apify.com/fairquery/osv-dependency-vulnerability-check): packages and lockfiles against OSV.dev; $0.90 per 1,000 packages + $2.80 per 1,000 vulnerabilities
+- [EDGAR Company Facts & Filings for Agents](https://apify.com/fairquery/edgar-company-facts-filings): SEC filings and XBRL facts by ticker, CIK or name; from $2 per 1,000 companies
+- **MCP server** [`@fairquery/agent-trust-mcp`](https://www.npmjs.com/package/@fairquery/agent-trust-mcp): one MCP server for Claude Desktop, Cursor and VS Code (`npx -y @fairquery/agent-trust-mcp`). It has 7 free tools that need no token, plus paid tools that call the PII, email, sanctions and OSV Actors with your own Apify token.
+
+All Fairquery Actors: https://apify.com/fairquery
 
 ## Kits & templates
 
@@ -142,3 +195,14 @@ Optional guides from Fairquery for wiring this Actor into agents and automations
 ## Disclaimer
 
 Detection is heuristic (single request, no JS execution). Only publicly served files are read; robots.txt is respected by default.
+
+## Links
+
+- Apify Store: https://apify.com/fairquery/website-tech-seo-ai-readiness
+- GitHub: https://github.com/fairquery/website-tech-seo-ai-readiness
+- Contact: fairquery@proton.me
+- License: MIT
+
+## Development
+
+Local development, tests and deployment notes are in [DEVELOPMENT.md](./DEVELOPMENT.md). The Apify Store README is [`.actor/README.md`](./.actor/README.md).
