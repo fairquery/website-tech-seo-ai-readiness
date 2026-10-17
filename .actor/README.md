@@ -1,6 +1,6 @@
 # Website Tech, SEO & llms.txt Check for Agents
 
-**Returns one row per website (tech stack, SEO score, robots.txt AI-crawler rules, sitemap and llms.txt) for $2 per 1,000 sites.** You pay $0.002 per site row, and error rows are free. Example: auditing 250 lead websites costs 250 × $0.002 = **$0.50**, plus Apify's $0.00005 Actor-start fee.
+**Returns one row per website (tech stack, SEO score, robots.txt AI-crawler rules, sitemap and llms.txt) for $1.50 per 1,000 sites.** You pay $0.0015 per site row, and error rows are free. Example: auditing 250 lead websites costs 250 × $0.0015 = **$0.38**, plus Apify's $0.00005 Actor-start fee.
 
 **Fairquery** Apify Actor that returns **one structured row per website**: tech stack, title/meta/Open Graph/JSON-LD, an SEO issue list with a 0–100 score, **robots.txt rules for AI crawlers** (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot, …), XML sitemap, **llms.txt / llms-full.txt**, security headers, and a 0–100 **AI-readiness score**. Plain HTTP (no browser), so it's fast and cheap.
 
@@ -71,12 +71,12 @@ Key-value store record **`RUN_SUMMARY`**: sites checked, errors, HTTP request co
 
 | Event | Price | When |
 | --- | --- | --- |
-| `site-checked` | $0.002 | Each website row returned |
+| `site-checked` | $0.0015 | Each website row returned |
 | `apify-actor-start` | $0.00005 | Once per run, per GB of memory (Apify default event) |
 
 Error rows (`FETCH_FAILED`, `HTTP_ERROR`, `BLOCKED_OR_RATE_LIMITED`, `ROBOTS_DISALLOWED`, …) are **never charged**.
 
-**Worked example:** 1,000 domains from a lead list where 60 cannot be fetched: 940 × $0.002 = **$1.88**, plus $0.00005.
+**Worked example:** 1,000 domains from a lead list where 60 cannot be fetched: 940 × $0.0015 = **$1.41**, plus $0.00005.
 
 To cap spend, set a maximum cost per run in the run options; the Actor stops cleanly at the limit. `maxSites` caps how many sites one run checks. Prices are from the Store pricing tab (October 2026).
 
@@ -121,7 +121,7 @@ llms.txt (25), llms-full.txt (5), AI bots allowed (up to 20), JSON-LD (15), at l
 
 **How much does it cost?**
 
-$0.002 per site row ($2 per 1,000), plus a $0.00005 start fee. Failed fetches are free.
+$0.0015 per site row ($1.50 per 1,000), plus a $0.00005 start fee. Failed fetches are free.
 
 **How do I limit spend?**
 
@@ -139,12 +139,12 @@ Yes, through [Apify MCP](https://mcp.apify.com) with Actor `fairquery/website-te
 
 Other Fairquery tools on the Apify Store. Each one returns structured rows with machine-readable error codes, and error rows are never charged:
 
-- [Email Validator for Agents (MX, Disposable, Typo)](https://apify.com/fairquery/email-validator-mx-disposable): syntax, MX, disposable, role and typo checks without sending mail; $2 per 1,000 emails
-- [Website Contact & Company Enricher](https://apify.com/fairquery/website-contact-company-enricher): domain in, public business emails, phones, socials and company details out; $4 per 1,000 domains
-- [Sanctions & Watchlist Screener (OFAC, EU, UK, UN)](https://apify.com/fairquery/sanctions-watchlist-screener): fuzzy name screening against official sanctions lists; $5 per 1,000 names
-- [LLM Data Guard: PII & Secret Redactor](https://apify.com/fairquery/llm-data-guard-pii-secrets): redact PII and secrets before text reaches an LLM; $3 per 1,000 documents + $0.50 per 1,000 findings
-- [Dependency Vulnerability Check for Agents](https://apify.com/fairquery/osv-dependency-vulnerability-check): packages and lockfiles against OSV.dev; $0.90 per 1,000 packages + $2.80 per 1,000 vulnerabilities
-- [EDGAR Company Facts & Filings for Agents](https://apify.com/fairquery/edgar-company-facts-filings): SEC filings and XBRL facts by ticker, CIK or name; from $2 per 1,000 companies
+- [Email Validator for Agents (MX, Disposable, Typo)](https://apify.com/fairquery/email-validator-mx-disposable): syntax, MX, disposable, role and typo checks without sending mail; $0.79 per 1,000 emails
+- [Website Contact & Company Enricher](https://apify.com/fairquery/website-contact-company-enricher): domain in, public business emails, phones, socials and company details out; $3 per 1,000 domains
+- [Sanctions & Watchlist Screener (OFAC, EU, UK, UN)](https://apify.com/fairquery/sanctions-watchlist-screener): fuzzy name screening against official sanctions lists; $3 per 1,000 names + $0.007 per run
+- [LLM Data Guard: PII & Secret Redactor](https://apify.com/fairquery/llm-data-guard-pii-secrets): redact PII and secrets before text reaches an LLM; $1.50 per 1,000 documents + $0.20 per 1,000 findings
+- [Dependency Vulnerability Check for Agents](https://apify.com/fairquery/osv-dependency-vulnerability-check): packages and lockfiles against OSV.dev; $0.50 per 1,000 packages + $1.50 per 1,000 vulnerabilities
+- [EDGAR Company Facts & Filings for Agents](https://apify.com/fairquery/edgar-company-facts-filings): SEC filings and XBRL facts by ticker, CIK or name; from $1.50 per 1,000 companies
 - **MCP server** [`@fairquery/agent-trust-mcp`](https://www.npmjs.com/package/@fairquery/agent-trust-mcp): one MCP server for Claude Desktop, Cursor and VS Code (`npx -y @fairquery/agent-trust-mcp`). It has 7 free tools that need no token, plus paid tools that call the PII, email, sanctions and OSV Actors with your own Apify token.
 
 All Fairquery Actors: https://apify.com/fairquery
