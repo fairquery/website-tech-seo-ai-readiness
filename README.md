@@ -82,7 +82,7 @@ To cap spend, set a maximum cost per run in the run options; the Actor stops cle
 
 ## Memory / runtime
 
-Default **256 MB**, no browser, no proxy. Typically 1–3 s per site, 3 sites in parallel. Slow or rate-limiting sites take longer.
+Runs at a fixed **256 MB** (default and maximum; the check is network-bound, so more memory does not help), no browser, no proxy. Typically 1–3 s per site, 3 sites in parallel. Slow or rate-limiting sites take longer.
 
 ## MCP / Apify tools
 
