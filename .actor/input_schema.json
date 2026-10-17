@@ -10,12 +10,12 @@
             "type": "array",
             "editor": "stringList",
             "description": "Domains or URLs (e.g. example.com or https://example.com/page). One row per unique URL.",
-            "default": [
+            "prefill": [
                 "apify.com",
                 "https://www.python.org",
                 "vercel.com"
             ],
-            "prefill": [
+            "example": [
                 "apify.com",
                 "https://www.python.org",
                 "vercel.com"

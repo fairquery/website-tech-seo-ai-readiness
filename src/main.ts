@@ -76,7 +76,8 @@ if (!targets.length) {
         message: 'Input.urls must contain at least one domain or URL.',
         retryable: false,
     });
-    await finish();
+    // Fail fast: never fall back to sample input; error rows are not charged.
+    await finish({ exitCode: 1, statusMessage: 'INPUT_EMPTY: urls is required' });
 }
 
 log.info('Website check starting', { sites: targets.length });
@@ -263,7 +264,7 @@ async function checkSite(inputStr: string, url: URL): Promise<void> {
     ai.push(aiScore);
 }
 
-async function finish(): Promise<never> {
+async function finish(exitOptions?: { exitCode: number; statusMessage: string }): Promise<never> {
     const avg = (a: number[]): number | null => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null);
     const summary: RunSummary = {
         schema_version: SCHEMA_VERSION,
@@ -278,7 +279,7 @@ async function finish(): Promise<never> {
     };
     await emitter.flush();
     await Actor.setValue('RUN_SUMMARY', summary);
-    await Actor.exit();
+    await Actor.exit(exitOptions);
     return undefined as never;
 }
 
