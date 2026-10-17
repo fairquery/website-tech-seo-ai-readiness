@@ -31,9 +31,9 @@ const FETCH_BEHAVIOR =
 const ERRORS =
     'Errors (isError=true, JSON {error, message, retryable}): INVALID_URL, BLOCKED_PRIVATE_ADDRESS, DNS_FAILED, FETCH_FAILED, TIMEOUT, TOO_MANY_REDIRECTS';
 
-const urlArg = z.string().min(1).describe('Required. One public domain or http(s) URL, e.g. "vercel.com" or "https://www.python.org/about/". Bare domains are fetched over https; private/loopback hosts are refused.');
-const limitArg = (def: number, max: number) => z.number().int().min(1).max(max).optional().describe(`Optional page size: number of items to return, integer 1-${max} (default ${def})`);
-const offsetArg = z.number().int().min(0).optional().describe('Zero-based offset into the full result list (default 0); use nextOffset from the previous page');
+const urlArg = z.string().min(1).describe('Required. One public domain or http(s) URL (non-empty string), e.g. "vercel.com" or "https://www.python.org/about/". Bare domains are fetched over https; other schemes, credentials in the URL, dot-less hosts and private/loopback addresses are refused.');
+const limitArg = (def: number, max: number) => z.number().int().min(1).max(max).optional().describe(`Optional page size: number of items to return, integer 1-${max} (default ${def}). Example: ${Math.min(def, 20)}`);
+const offsetArg = z.number().int().min(0).optional().describe('Optional zero-based offset into the full result list, integer >= 0 (default 0); use nextOffset from the previous page, e.g. 50');
 
 function fail(e: unknown): ToolResult {
     if (e instanceof WebError) return errorResult(e.code, e.message, e.retryable);
@@ -47,7 +47,7 @@ function errRow(input: string, e: unknown): Record<string, unknown> {
 
 
 function createServer(): McpServer {
-    const server = new McpServer({ name: 'fairquery-web', version: '1.2.1' });
+    const server = new McpServer({ name: 'fairquery-web', version: '1.2.2' });
 
     server.registerTool(
         'web_quick_check',
@@ -60,9 +60,10 @@ function createServer(): McpServer {
                 'RETURNS: {count, items}: one "quick_check" row per input (input, requested_url, final_url, status_code, ok, https, redirect_count, redirects[{url,status}], response_ms, content_type, server, title, checked_at) or an "error" row (input, code, message, retryable) with codes INVALID_URL, BLOCKED_PRIVATE_ADDRESS, DNS_FAILED, FETCH_FAILED, TIMEOUT, TOO_MANY_REDIRECTS. Per-URL errors never fail the whole call.',
                 "WHEN NOT TO USE: not for SEO/meta analysis (web_seo_audit), security headers (web_security_headers) or >20 URLs (web_batch_audit, paid).",
                 "COST: free - runs locally in this MCP server (direct HTTP GETs), no APIFY_TOKEN, no Apify billing.",
+                'PARAMETERS: urls: each entry is normalized independently and returns exactly one row, in input order: surrounding whitespace is trimmed, an entry without scheme gets "https://" (write "http://..." explicitly to test the plain-HTTP redirect), the #fragment is dropped, and the path/query are kept, so "vercel.com" and "vercel.com/pricing" are different checks. Entries that are not http(s), contain user:password@, have no dot in the host (e.g. "localhost") or resolve to private/loopback/link-local IPs become per-URL error rows (INVALID_URL / BLOCKED_PRIVATE_ADDRESS) while the other URLs still run; duplicates are fetched twice. All URLs are fetched in parallel, so total latency is roughly the slowest URL (max 15 s each). Need more than 20? Split into several calls or use web_batch_audit.',
                 "EXAMPLE: {\"urls\":[\"vercel.com\"]} -> {count:1, items:[{type:\"quick_check\", final_url:\"https://vercel.com/\", status_code:200, ok:true, ...}]}",
             ].join('\n'),
-            inputSchema: { urls: z.array(z.string().min(1)).min(1).max(20).describe('Required. 1-20 public domains or http(s) URLs (bare domains use https), e.g. ["vercel.com","http://github.com"]') },
+            inputSchema: { urls: z.array(z.string().min(1)).min(1).max(20).describe('Required. 1-20 non-empty strings, each a public domain or http(s) URL (bare domains use https; path kept, #fragment dropped). Example: ["vercel.com","http://github.com","https://www.python.org/about/"]') },
             outputSchema: rowsOutputSchema,
             annotations: { title: 'Quick URL check (free)', ...READ_ONLY_OPEN_WORLD },
         },
@@ -81,11 +82,12 @@ function createServer(): McpServer {
                 'RETURNS: one "seo_audit" snapshot object (snapshot_schema "fairquery-web-snapshot/1") with the fields above plus input, final_url, status_code, https, response_ms, html_truncated, checked_at. ' + ERRORS + '.',
                 "WHEN NOT TO USE: only need reachability (web_quick_check), only AI-bot rules (web_ai_crawler_access), only stack (web_tech_stack), or many sites (web_batch_audit, paid).",
                 "COST: free - runs locally in this MCP server (direct HTTP GETs), no APIFY_TOKEN, no Apify billing.",
+                'PARAMETERS: url: the exact page is audited (path and query matter: "python.org" audits the homepage, "python.org/about/" that page), after following up to 5 redirects; on-page fields describe the final_url, while robots.txt, sitemap and llms.txt are always taken from the final URL\'s origin. Pass "http://..." explicitly to get the NO_HTTPS check on a site that does not redirect. checkRobots=false fetches only the page (1 request instead of ~5): robots_txt_found, sitemap_found, llms_txt_found and ai_bots become null, MISSING_ROBOTS_TXT / MISSING_SITEMAP are never raised and ai_readiness_score is computed from page signals only - so seo_score can be higher and the snapshot is not comparable with a checkRobots=true one in web_compare_snapshots. Keep the default true for snapshots you intend to compare later.',
                 "EXAMPLE: {\"url\":\"https://www.python.org/about/\"} -> {type:\"seo_audit\", seo_score:0-100, ai_readiness_score:0-100, issues:[...], ...}",
             ].join('\n'),
             inputSchema: {
                 url: urlArg,
-                checkRobots: z.boolean().optional().describe('Also fetch robots.txt, sitemap and llms.txt for AI-bot/sitemap checks and scores (default true). false = page only, faster.'),
+                checkRobots: z.boolean().optional().describe('Optional boolean, default true. true also fetches robots.txt, the XML sitemap, /llms.txt and /llms-full.txt from the page origin (~5 requests); false = page only (1 request, faster; robots/sitemap/llms fields null and their issues skipped). Example: false'),
             },
             annotations: { title: 'Single-page SEO audit (free)', ...READ_ONLY_OPEN_WORLD },
         },
@@ -109,11 +111,12 @@ function createServer(): McpServer {
                 'RETURNS: one "ai_crawler_access" object: origin, robots_txt_url, robots_txt_found, robots_txt_status, ai_bots{bot: status}, allowed_count, partial_count, blocked_count, note, sitemaps_declared[], llms_txt{url,found,status,bytes,title,links}, llms_full_txt{...}, checked_at. ' + ERRORS + '.',
                 "WHEN NOT TO USE: for full page SEO use web_seo_audit; for sitemap contents use web_sitemap_info; for many sites use web_batch_audit (paid).",
                 "COST: free - runs locally in this MCP server (direct HTTP GETs), no APIFY_TOKEN, no Apify billing.",
+                'PARAMETERS: url: only its origin (scheme + host + port) is used, so "nytimes.com/section/tech" and "nytimes.com" give the same result; www and non-www hosts are different origins with possibly different robots.txt files. bots replaces (does not extend) the default list - include the defaults you still want. Each token is matched like a crawler would: case-insensitively, against robots.txt User-agent groups whose name is a prefix of the token (so a "Googlebot" group also covers "Googlebot-Image"), falling back to the "*" group when no specific group exists; status is reported under the exact token you passed. If robots.txt is missing (or is an HTML soft-404) every bot is "allowed". bots does not affect the llms.txt / llms-full.txt checks.',
                 "EXAMPLE: {\"url\":\"nytimes.com\",\"bots\":[\"GPTBot\",\"ClaudeBot\"]} -> {ai_bots:{GPTBot:\"allowed|partial|blocked\", ClaudeBot:...}, blocked_count, llms_txt, ...}",
             ].join('\n'),
             inputSchema: {
                 url: urlArg,
-                bots: z.array(z.string().min(1)).max(50).optional().describe('User-agent tokens to evaluate instead of the default AI-bot list, e.g. ["GPTBot","Googlebot"]'),
+                bots: z.array(z.string().min(1)).max(50).optional().describe('Optional, default = the 13 AI bots listed in the description. 1-50 robots.txt user-agent tokens (case-insensitive) to evaluate instead of the defaults. Example: ["GPTBot","ClaudeBot","Googlebot"]'),
             },
             annotations: { title: 'AI crawler access (free)', ...READ_ONLY_OPEN_WORLD },
         },
@@ -137,11 +140,12 @@ function createServer(): McpServer {
                 'RETURNS: a paged list {count, total, offset, hasMore, nextOffset, meta{input, final_url, status_code, generator, server, x_powered_by, note}, items[{type:"technology", name, category, evidence}]}. Filter with category. ' + ERRORS + '.',
                 "WHEN NOT TO USE: for SEO metadata use web_seo_audit; for security headers use web_security_headers.",
                 "COST: free - runs locally in this MCP server (direct HTTP GETs), no APIFY_TOKEN, no Apify billing.",
+                'PARAMETERS: url: exactly that page is fetched (one request after redirects), so a marketing homepage and an app/shop subpage can show different stacks; meta.final_url shows what was analysed. category is a case-insensitive substring filter on the category name, applied before paging: existing categories are CMS, Headless CMS, Site builder, E-commerce, Payments, JS framework, JS library, Framework, CSS framework, Static site generator, Hosting, CDN, Web server, Security, Analytics, Tag manager, Advertising, Marketing automation, Consent, Live chat, Support, Docs, Fonts, Language - e.g. "cms" also matches "Headless CMS" and "framework" matches JS/CSS framework. An unmatched category returns an empty page (count 0), not an error. limit/offset page the filtered list; total = number of matching technologies.',
                 "EXAMPLE: {\"url\":\"vercel.com\",\"category\":\"hosting\"} -> {count:1, items:[{type:\"technology\", name:\"Vercel\", category:\"hosting\", evidence:\"...\"}], ...}",
             ].join('\n'),
             inputSchema: {
                 url: urlArg,
-                category: z.string().optional().describe('Only return technologies whose category contains this text (case-insensitive), e.g. "analytics", "cms", "cdn"'),
+                category: z.string().optional().describe('Optional, default omitted = all categories. Case-insensitive substring of the category name (e.g. "analytics", "cms", "cdn", "hosting", "e-commerce"). Example: "analytics"'),
                 limit: limitArg(50, 200),
                 offset: offsetArg,
             },
@@ -170,14 +174,15 @@ function createServer(): McpServer {
                 'RETURNS: {count, total, offset, hasMore, nextOffset, meta{origin, sitemap_url, declared_in_robots, is_index, child_sitemap_count, child_sitemaps[], expanded_child_sitemaps[], truncated}, items[{type:"url", loc, lastmod, sitemap}]}. Errors: SITEMAP_NOT_FOUND plus ' + ERRORS.replace('Errors (isError=true, JSON {error, message, retryable}): ', '') + '.',
                 "WHEN NOT TO USE: not a crawler and does not audit pages - pass selected URLs to web_seo_audit; for AI-bot robots.txt rules use web_ai_crawler_access.",
                 "COST: free - runs locally in this MCP server (direct HTTP GETs), no APIFY_TOKEN, no Apify billing.",
+                'PARAMETERS: url: only its origin is used for discovery (the path is ignored); discovery tries robots.txt Sitemap: lines, /sitemap.xml and /sitemap_index.xml (max 4 candidates) and, if nothing is found, retries once on the origin the homepage redirects to (example.com -> www.example.com). sitemapUrl skips discovery entirely (no robots.txt, no retry) - use it for sitemaps at non-standard paths; it must be an absolute http(s) URL. maxChildSitemaps only matters when the sitemap is an index: only the first N children (index order) are downloaded, so total counts URLs of those children only; 0 lists child_sitemaps without URLs. contains is a case-sensitive substring test on loc; sort "lastmod_desc" orders by lastmod (ISO strings) with undated URLs last. Both are applied before paging, so total reflects the filtered list; continue with offset = nextOffset.',
                 "EXAMPLE: {\"url\":\"python.org\",\"contains\":\"/blog/\",\"sort\":\"lastmod_desc\",\"limit\":10} -> paged url rows with loc and lastmod.",
             ].join('\n'),
             inputSchema: {
                 url: urlArg,
-                sitemapUrl: z.string().url().optional().describe('Explicit sitemap URL to use instead of auto-discovery'),
-                maxChildSitemaps: z.number().int().min(0).max(20).optional().describe('For sitemap indexes: how many child sitemaps to fetch and list URLs from (default 3, max 20; 0 = list children only)'),
-                contains: z.string().optional().describe('Only URLs containing this substring, e.g. "/blog/"'),
-                sort: z.enum(['sitemap', 'lastmod_desc']).optional().describe('"sitemap" = file order (default); "lastmod_desc" = most recently modified first'),
+                sitemapUrl: z.string().url().optional().describe('Optional, default = auto-discovery. Absolute http(s) URL of a sitemap or sitemap index to use instead of discovery. Example: "https://www.python.org/sitemap.xml"'),
+                maxChildSitemaps: z.number().int().min(0).max(20).optional().describe('Optional integer 0-20, default 3. For sitemap indexes only: number of child sitemaps (in index order) to fetch and list URLs from; 0 = list children only. Example: 10'),
+                contains: z.string().optional().describe('Optional, default no filter. Case-sensitive substring that loc must contain. Example: "/blog/"'),
+                sort: z.enum(['sitemap', 'lastmod_desc']).optional().describe('Optional, one of "sitemap" | "lastmod_desc", default "sitemap" (file order); "lastmod_desc" = most recently modified first, undated last'),
                 limit: limitArg(100, 1000),
                 offset: offsetArg,
             },
@@ -208,9 +213,10 @@ function createServer(): McpServer {
                 'RETURNS: one "security_headers" object: input, final_url, status_code, https, score, grade, headers[{header, present, value, warning, weight}], missing[], info_disclosure_headers[{header, value}], checked_at. ' + ERRORS + '.',
                 "WHEN NOT TO USE: not a vulnerability/penetration scan; for dependency CVEs use an OSV tool; for SEO use web_seo_audit.",
                 "COST: free - runs locally in this MCP server (direct HTTP GETs), no APIFY_TOKEN, no Apify billing.",
+                'PARAMETERS: url: headers are read from the FINAL response after up to 5 redirects, so "github.com" grades https://github.com/ - the redirecting hop itself is not graded. Path matters when a site sets different headers per path (e.g. "/login" vs "/"); test the exact page you care about. A bare domain is requested over https; pass "http://..." explicitly to see whether plain HTTP redirects to HTTPS - a final response over plain HTTP caps the score at 40 (grade D at best). Only response headers are evaluated (one request, body capped at 100 KB), never page content.',
                 "EXAMPLE: {\"url\":\"github.com\"} -> {type:\"security_headers\", score:0-100, grade:\"A\"..\"F\", missing:[...], ...}",
             ].join('\n'),
-            inputSchema: { url: urlArg },
+            inputSchema: { url: z.string().min(1).describe('Required. One public domain or http(s) URL (non-empty string), e.g. "github.com" or "http://example.com/login". Bare domains use https; headers come from the final response after redirects; private/loopback hosts are refused.') },
             annotations: { title: 'Security headers (free)', ...READ_ONLY_OPEN_WORLD },
         },
         async ({ url }) => {
@@ -233,13 +239,14 @@ function createServer(): McpServer {
                 'RETURNS: {summary{before_url, after_url, before_checked_at, after_checked_at, seo_score_before, seo_score_after, seo_score_delta, ai_readiness_score_delta, issues_added, issues_resolved, changed_fields}, changes[{type:"change", field, before, after, delta?, added?, removed?} | {type:"issue_added"|"issue_resolved", code}], before, after (only fetched snapshots are echoed)}. Errors: INVALID_ARGUMENTS (wrong mode combination) plus ' + ERRORS.replace('Errors (isError=true, JSON {error, message, retryable}): ', '') + '.',
                 "WHEN NOT TO USE: for a single audit without comparison use web_seo_audit.",
                 "COST: free (local fetches, no APIFY_TOKEN).",
+                'PARAMETERS: exactly one of three combinations is accepted, any other combination (including all four or a single field) returns INVALID_ARGUMENTS without fetching: {before, after} | {before, url} | {url, compareUrl}. before/after must be whole snapshot objects as returned (type "seo_audit" from web_seo_audit, or a "site" row from web_batch_audit) - pass them unmodified; missing fields are compared as null. In {before, url} the live side is re-audited with checkRobots=true, so compare it only with a snapshot also taken with checkRobots=true. In {url, compareUrl} url is the "before" side and compareUrl the "after" side, so seo_score_delta = compareUrl score minus url score. url and compareUrl follow the same rules as web_seo_audit url (bare domain -> https, exact page).',
                 "EXAMPLE: {\"url\":\"mysite.com\",\"compareUrl\":\"competitor.com\"} -> {summary:{seo_score_delta, issues_added, ...}, changes:[...]}",
             ].join('\n'),
             inputSchema: {
-                before: z.record(z.string(), z.unknown()).optional().describe('Earlier snapshot object (output of web_seo_audit or a web_batch_audit site row)'),
-                after: z.record(z.string(), z.unknown()).optional().describe('Later snapshot object to compare against before'),
-                url: z.string().min(1).optional().describe('URL to audit live: the "after" side (with before) or the first side (with compareUrl)'),
-                compareUrl: z.string().min(1).optional().describe('Second live URL to audit and compare against url'),
+                before: z.record(z.string(), z.unknown()).optional().describe('Optional; used with after or url. Earlier snapshot object, unmodified output of web_seo_audit (type "seo_audit") or a web_batch_audit "site" row. Example: {"type":"seo_audit","final_url":"https://example.com/","seo_score":72,...}'),
+                after: z.record(z.string(), z.unknown()).optional().describe('Optional; used only with before. Later snapshot object of the same shape to compare against before'),
+                url: z.string().min(1).optional().describe('Optional; used with before or compareUrl. Public domain or http(s) URL audited live: the "after" side (with before) or the "before" side (with compareUrl). Example: "mysite.com"'),
+                compareUrl: z.string().min(1).optional().describe('Optional; used only with url. Second public domain or http(s) URL audited live as the "after" side. Example: "competitor.com"'),
             },
             annotations: { title: 'Compare snapshots (free)', ...READ_ONLY_OPEN_WORLD },
         },
@@ -272,15 +279,16 @@ function createServer(): McpServer {
                 'COST: paid (billed to your Apify account, pay-per-event): $0.00005 per run + $0.002 per site row; error rows are free. 50 sites ~ $0.10.',
                 'RETURNS: {count, items}. site rows: domain, status_code, https, response_ms, title, meta_description, canonical, lang, h1[], word_count, open_graph, json_ld_types, technologies[{name, category, evidence}], security_headers, robots_txt_found, ai_bots{bot: allowed|partial|blocked}, sitemap_found, sitemap_url_count, llms_txt_found, llms_txt_title, seo_score, seo_issues[{code, severity, message}], ai_readiness_score, source_url, checked_at. error rows: code (INPUT_EMPTY, INVALID_URL, MAX_SITES_EXCEEDED, ROBOTS_DISALLOWED, FETCH_FAILED, HTTP_ERROR, BLOCKED_OR_RATE_LIMITED), message, retryable, input. Tool-level errors: APIFY_TOKEN_MISSING, APIFY_ACTOR_RUN_FAILED.',
                 "WHEN NOT TO USE: for 1-20 sites or interactive questions use the free tools above (same checks, no cost).",
+                'PARAMETERS: urls: bare domains use https, entries are deduped, and each unique URL is one billed site row ($0.002); invalid, robots-disallowed or unreachable entries become free error rows. maxSites (default 500) caps unique URLs per run and is therefore your spend cap; extras get one free MAX_SITES_EXCEEDED row. The check* flags only remove work and fields, never change the price: checkRobots=false sets ai_bots / robots_txt_found to null, checkSitemap=false sitemap_*, checkLlmsTxt=false llms_txt_*; MISSING_ROBOTS_TXT / MISSING_SITEMAP issues are then not raised, so seo_score is not comparable across different flag settings. respectRobotsTxt is independent of checkRobots: robots.txt is still fetched when it is true, and a disallowed page yields a free ROBOTS_DISALLOWED row instead of an audit; set false only for sites you own or may audit.',
                 "EXAMPLE: {\"urls\":[\"vercel.com\",\"netlify.com\"],\"checkLlmsTxt\":false} -> {count:2, items:[{type:\"site\", domain:\"vercel.com\", seo_score:..., ...}, ...]}",
             ].join('\n'),
             inputSchema: {
-                urls: z.array(z.string().min(1)).min(1).max(5000).describe('Domains or URLs, e.g. ["vercel.com","https://www.python.org/about/"]. Bare domains use https. One row per unique URL.'),
-                checkRobots: z.boolean().optional().describe('Fetch robots.txt and report allow/partial/blocked per AI bot (default true)'),
-                checkSitemap: z.boolean().optional().describe('Find the XML sitemap and count URLs (default true)'),
-                checkLlmsTxt: z.boolean().optional().describe('Check /llms.txt and /llms-full.txt (default true)'),
-                respectRobotsTxt: z.boolean().optional().describe('Skip pages robots.txt disallows for generic crawlers, emitting ROBOTS_DISALLOWED (default true, recommended)'),
-                maxSites: z.number().int().min(1).max(10000).optional().describe('Safety cap on unique URLs per run (default 500); extras produce a MAX_SITES_EXCEEDED error row'),
+                urls: z.array(z.string().min(1)).min(1).max(5000).describe('Required. 1-5000 domains or http(s) URLs; bare domains use https; one billed row per unique URL. Example: ["vercel.com","https://www.python.org/about/"]'),
+                checkRobots: z.boolean().optional().describe('Optional boolean, default true. Fetch robots.txt and report allowed/partial/blocked per AI bot; false = ai_bots null'),
+                checkSitemap: z.boolean().optional().describe('Optional boolean, default true. Find the XML sitemap and count its URLs; false = sitemap fields null'),
+                checkLlmsTxt: z.boolean().optional().describe('Optional boolean, default true. Check /llms.txt and /llms-full.txt; false = llms_txt fields null'),
+                respectRobotsTxt: z.boolean().optional().describe('Optional boolean, default true (recommended). Skip pages robots.txt disallows for generic crawlers, emitting a free ROBOTS_DISALLOWED row'),
+                maxSites: z.number().int().min(1).max(10000).optional().describe('Optional integer 1-10000, default 500. Safety/spend cap on unique URLs per run; extras produce one free MAX_SITES_EXCEEDED error row. Example: 100'),
             },
             outputSchema: rowsOutputSchema,
             annotations: { title: 'Bulk audit via Apify (paid)', ...READ_ONLY_OPEN_WORLD },
