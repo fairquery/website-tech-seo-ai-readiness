@@ -1,4 +1,4 @@
-# Website Tech, SEO & llms.txt Check for Agents
+# Website Tech Stack, SEO & llms.txt Checker
 
 **Returns one row per website (tech stack, SEO score, robots.txt AI-crawler rules, sitemap and llms.txt) for $1.50 per 1,000 sites.** You pay $0.0015 per site row, and error rows are free. Example: auditing 250 lead websites costs 250 × $0.0015 = **$0.38**, plus Apify's $0.00005 Actor-start fee.
 
@@ -165,6 +165,7 @@ Detection is heuristic (single request, no JS execution). Only publicly served f
 
 ## Links
 
+- Guide: [How to check a website's llms.txt file and its robots.txt rules for AI crawlers](https://fairquery.github.io/posts/check-llms-txt-file-ai-crawlers-robots-txt/)
 - Apify Store: https://apify.com/fairquery/website-tech-seo-ai-readiness
 - GitHub: https://github.com/fairquery/website-tech-seo-ai-readiness
 - Contact: fairquery@proton.me
