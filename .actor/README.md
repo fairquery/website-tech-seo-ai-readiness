@@ -166,7 +166,7 @@ Detection is heuristic (single request, no JS execution). Only publicly served f
 
 ## Links
 
-- Guide: [How to check a website's llms.txt file and its robots.txt rules for AI crawlers](https://fairquery.github.io/posts/check-llms-txt-file-ai-crawlers-robots-txt/)
+- Guide: [How to check a website's llms.txt file and its robots.txt rules for AI crawlers](https://getfairquery.com/posts/check-llms-txt-file-ai-crawlers-robots-txt/)
 - Apify Store: https://apify.com/fairquery/website-tech-seo-ai-readiness
 - GitHub: https://github.com/fairquery/website-tech-seo-ai-readiness
 - Contact: fairquery@proton.me

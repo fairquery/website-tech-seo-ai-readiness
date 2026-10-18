@@ -31,4 +31,4 @@ This repository contains an Apify Actor and a local stdio MCP server (`mcp/`).
 - **MCP server:** runs on your machine. Free tools make no calls to Apify or Fairquery. Paid tools run the Actor with your own `APIFY_TOKEN`, which is read from the environment only when needed and never logged or returned.
 - The repository contains no credentials.
 
-Full details: https://fairquery.github.io/security/
+Full details: https://getfairquery.com/security/
